@@ -1,0 +1,65 @@
+## Diagrammatic Representation of RNN Forward Propagation
+
+Input Words (one-hot vectors):
+      x₁         x₂         x₃
+   ["I"]     ["love"]    ["cats"]
+      │          │          │
+      ▼          ▼          ▼
+ ┌─────────┐  ┌─────────┐  ┌─────────┐
+ │   h₁    │─▶│   h₂    │─▶│   h₃    │
+ └─────────┘  └─────────┘  └─────────┘
+      │          │          │
+      ▼          ▼          ▼
+ ┌─────────┐  ┌─────────┐  ┌─────────┐
+ │   O₁    │  │   O₂    │  │   O₃    │
+ └─────────┘  └─────────┘  └─────────┘
+      │          │          │
+      ▼          ▼          ▼
+   Output     Output     Final Output
+              (Ignored)    ŷ (Sigmoid)
+                            │
+                            ▼
+                      Loss: L(y, ŷ)
+
+Mathematical Equations (below the diagram):
+	•	Hidden state computations:
+
+h_1 = \tanh(W x_1 + U h_0 + b_h) \quad (\text{with } h_0 = 0)
+
+h_2 = \tanh(W x_2 + U h_1 + b_h)
+
+h_3 = \tanh(W x_3 + U h_2 + b_h)
+	•	Output computations:
+
+O_1 = W’ h_1 + b_o
+
+O_2 = W’ h_2 + b_o
+
+O_3 = W’ h_3 + b_o
+	•	Final Prediction (Sigmoid activation):
+
+\hat{y} = \sigma(O_3)
+	•	Loss calculation (Binary Cross-Entropy):
+
+L(y, \hat{y}) = -\left[ y\log(\hat{y}) + (1-y)\log(1-\hat{y}) \right]
+
+⸻
+
+Legend:
+	•	x_t: Input at timestep t
+	•	h_t: Hidden state at timestep t
+	•	O_t: Output at timestep t
+	•	W: Input-to-hidden weights
+	•	U: Hidden-to-hidden weights
+	•	W’: Hidden-to-output weights
+	•	b_h: Hidden layer bias
+	•	b_o: Output layer bias
+	•	\sigma: Sigmoid function
+	•	\hat{y}: Predicted sentiment score
+	•	y: Actual label (0 or 1)
+
+⸻
+
+Notes:
+	•	At the end (last timestep), the output O_3 passes through a Sigmoid activation to produce the final predicted sentiment probability \hat{y}.
+	•	The outputs at intermediate timesteps O_1, O_2 can be ignored if performing “Many-to-One” sentiment classification (final sentiment depends only on the last output).
