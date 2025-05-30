@@ -1,0 +1,164 @@
+Architecture: Encoder-Decoder (No Attention)
+
+🧠 Goal: Translate
+
+Input (English):
+
+"The cat ate"  
+
+Target (Spanish):
+
+"El gato comió"
+
+
+⸻
+
+⚙️ Architecture: Encoder-Decoder (No Attention)
+
+Parameters:
+	•	Vocab size (English/Spanish): 6 words each
+	•	Embedding dimension: 2
+	•	LSTM units: 2
+	•	Sequence length: 3
+
+⸻
+
+🔤 Step 1: Vocabulary & Tokenization
+
+English Vocab:
+
+Word	Token
+the	1
+cat	2
+ate	3
+
+Input sequence: [1, 2, 3] → “the cat ate”
+
+Spanish Vocab:
+
+Word	Token
+	0
+el	1
+gato	2
+comió	3
+	4
+
+Target Input: [0, 1, 2] → <START> el gato
+Target Output: [1, 2, 3] → el gato comió
+
+⸻
+
+🔢 Step 2: Embedding Lookup
+
+English Embedding Matrix (2D):
+
+E_eng = {
+  1: [0.1, 0.3],   # the
+  2: [0.2, 0.6],   # cat
+  3: [0.7, 0.9]    # ate
+}
+
+So input becomes:
+
+X = [
+  [0.1, 0.3],
+  [0.2, 0.6],
+  [0.7, 0.9]
+]  # shape = (3, 2)
+
+
+⸻
+
+🧮 Step 3: Encoder LSTM (manually, 1 unit)
+
+We simulate a simplified LSTM with:
+	•	Weight Wx = [0.5, 0.1]
+	•	Recurrent Wh = [0.4, 0.2]
+	•	Bias b = 0
+
+Start with:
+	•	h₀ = 0
+
+t=1 (word = “the”):
+
+x₁ = [0.1, 0.3]
+h₁ = tanh(0.5*0.1 + 0.1*0.3 + 0.4*h₀) = tanh(0.05 + 0.03 + 0) = tanh(0.08) ≈ 0.08
+
+t=2 (word = “cat”):
+
+x₂ = [0.2, 0.6]
+h₂ = tanh(0.5*0.2 + 0.1*0.6 + 0.4*h₁)
+    = tanh(0.10 + 0.06 + 0.4*0.08) = tanh(0.10 + 0.06 + 0.032) = tanh(0.192) ≈ 0.19
+
+t=3 (word = “ate”):
+
+x₃ = [0.7, 0.9]
+h₃ = tanh(0.5*0.7 + 0.1*0.9 + 0.4*0.19)
+    = tanh(0.35 + 0.09 + 0.076) = tanh(0.516) ≈ 0.475
+
+✅ Final encoder hidden state = context vector = h₃ = 0.475
+
+⸻
+
+🧠 Step 4: Decoder LSTM (predict Spanish)
+
+Target Input: <START> el gato → [0, 1, 2]
+We use same weight set for simplicity.
+
+Embedding (Spanish):
+
+E_spa = {
+  0: [0.0, 0.0],   # <START>
+  1: [0.3, 0.4],   # el
+  2: [0.2, 0.5],   # gato
+  3: [0.6, 0.1]    # comió
+}
+
+Start with:
+	•	Initial hidden state = encoder output = h₀ = 0.475
+
+t=1 (input = <START> → [0.0, 0.0]):
+
+h₁ = tanh(0.5*0.0 + 0.1*0.0 + 0.4*0.475) = tanh(0.0 + 0.0 + 0.19) = tanh(0.19) ≈ 0.188
+
+t=2 (input = el → [0.3, 0.4]):
+
+h₂ = tanh(0.5*0.3 + 0.1*0.4 + 0.4*0.188)
+    = tanh(0.15 + 0.04 + 0.0752) = tanh(0.2652) ≈ 0.259
+
+t=3 (input = gato → [0.2, 0.5]):
+
+h₃ = tanh(0.5*0.2 + 0.1*0.5 + 0.4*0.259)
+    = tanh(0.10 + 0.05 + 0.104) = tanh(0.254) ≈ 0.248
+
+
+⸻
+
+🧮 Step 5: Final Dense + Softmax
+
+Let’s assume we have a simple output weight:
+
+W = [0.9, 0.3, 0.6, 0.2, 0.1, 0.05]  # For 6 Spanish vocab tokens
+
+Predicted logits at t=3:
+
+z = h₃ × W = 0.248 × W = [0.223, 0.074, 0.149, 0.050, 0.025, 0.012]
+
+Apply softmax (approximate):
+
+softmax(z) ≈ probability distribution
+→ highest at index 3 = "comió"
+
+✅ So, predicted next word = "comió"
+
+⸻
+
+✅ Final Translation Result:
+
+Input: "The cat ate"
+Output: <START> el gato comió <END>
+
+⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻
+
+
+
