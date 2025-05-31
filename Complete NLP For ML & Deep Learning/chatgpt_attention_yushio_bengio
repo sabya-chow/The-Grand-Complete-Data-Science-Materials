@@ -1,0 +1,153 @@
+
+
+🧠 Hypothetical Example
+
+Input (English): "The cat eats"
+Output (French): "Le chat mange"
+
+⸻
+
+🧾 Vocabulary and Embedding Setup
+
+Input (English) tokens:
+
+Word	Index	Embedding
+The	1	[0.1, 0.3]
+Cat	2	[0.2, 0.4]
+Eats	3	[0.6, 0.9]
+
+X = [x₁, x₂, x₃] = [[0.1, 0.3], [0.2, 0.4], [0.6, 0.9]]  # shape: (3, 2)
+
+Output (French) tokens:
+
+Word	Index	Embedding
+	0	[0.0, 0.0]
+Le	1	[0.3, 0.4]
+Chat	2	[0.2, 0.5]
+Mange	3	[0.6, 0.1]
+
+
+⸻
+
+✅ Step-by-Step Vectorized Implementation
+
+⸻
+
+🟢 1. Encoder (Bi)LSTM – forward only here for clarity
+
+Assume:
+	•	Hidden size: 1 (scalar)
+	•	Weights:
+W_x^{enc} = [0.5, 0.1], W_h^{enc} = 0.3
+
+⸻
+
+Forward Pass:
+
+h_1 = \tanh(0.5·0.1 + 0.1·0.3 + 0) = \tanh(0.08) ≈ 0.08
+h_2 = \tanh(0.5·0.2 + 0.1·0.4 + 0.3·0.08) = \tanh(0.164) ≈ 0.162
+h_3 = \tanh(0.5·0.6 + 0.1·0.9 + 0.3·0.162) = \tanh(0.4386) ≈ 0.412
+
+H = [h₁, h₂, h₃] = [0.08, 0.162, 0.412]
+
+
+⸻
+
+🔵 2. Decoder Initialization
+	•	Initial state: s₀ = h₃ = 0.412
+	•	Decoder input at t=1: <START> → [0.0, 0.0]
+	•	Decoder weights:
+W_x^{dec} = [0.6, 0.2], W_h^{dec} = 0.3
+
+⸻
+
+🟠 3. Decoder Step at t = 1
+
+(a) Compute decoder hidden state s_1:
+
+s_1 = \tanh(W_x·y₀ + W_h·s₀)
+= \tanh(0 + 0.3·0.412) = \tanh(0.1236) ≈ 0.123
+
+⸻
+
+(b) Compute alignment scores (dot product):
+
+e_{1j} = s_1 × h_j
+\Rightarrow [0.123·0.08, 0.123·0.162, 0.123·0.412]
+= [0.0098, 0.0199, 0.0507]
+
+⸻
+
+(c) Softmax attention weights:
+
+\alpha_{1j} = \text{softmax}(e_{1j}) = [0.327, 0.331, 0.341]
+
+⸻
+
+(d) Compute context vector:
+
+c_1 = \sum_j \alpha_{1j}·h_j = 0.327·0.08 + 0.331·0.162 + 0.341·0.412
+= 0.2204
+
+⸻
+
+(e) Combine & Predict output:
+
+Let:
+
+W_pred = [0.7, 0.3]
+z = 0.7·c₁ + 0.3·s₁ = 0.7·0.2204 + 0.3·0.123 = 0.1909
+
+Vocabulary projection:
+
+W_vocab = [0.1, 0.3, 0.6]  # ["<START>", "Le", "chat"]
+scores = W_vocab × z = [0.0191, 0.0573, 0.1145] → softmax → max at index 2 → "chat"
+
+✅ Predicted: "chat" (we expected "Le"; the architecture is correct, weights need learning)
+
+⸻
+
+🔁 Repeat for t = 2 and t = 3:
+
+Now, decoder input becomes:
+	•	t=2 → "chat" → [0.2, 0.5]
+	•	t=3 → "mange" → [0.6, 0.1]
+And same steps are repeated:
+New s₂, new alignment scores e₂j, new attention weights α₂j, new context c₂, then z₂, then predicted y₂.
+
+⸻
+
+🧮 Final ASCII Diagram: End-to-End Architecture
+
+             ENCODER SIDE                         ATTENTION + DECODER SIDE
+┌────────────────────────────┐         ┌───────────────────────────────────────────┐
+│  Input: "The"  "cat"  "eats" │        │ Target: <START> "Le"  "chat"  "mange"     │
+│    x₁     x₂     x₃         │        │    y₀      y₁     y₂      y₃             │
+│     ↓      ↓      ↓         │        │     ↓       ↓      ↓       ↓            │
+│ +--------+ +--------+ +--------+     │  +--------+ +--------+ +--------+        │
+│ | Embed  | | Embed  | | Embed  |     │  | Embed  | | Embed  | | Embed  |        │
+│ +--------+ +--------+ +--------+     │  +--------+ +--------+ +--------+        │
+│     ↓      ↓      ↓                  │         ↓         ↓         ↓           │
+│   [0.1,0.3][0.2,0.4][0.6,0.9]         │     [0,0]   [0.3,0.4]   [0.2,0.5]        │
+│     ↓      ↓      ↓                  │         ↓         ↓         ↓           │
+│ +----------------------------+       │ +-------------------------------+        │
+│ |        Encoder LSTM        |       │ |       Decoder LSTM Loop       |        │
+│ +----------------------------+       │ +-------------------------------+        │
+│     ↓      ↓      ↓                  │         ↓         ↓         ↓           │
+│    h₁     h₂     h₃                  │       s₁        s₂        s₃             │
+│  (0.08) (0.162)(0.412)               │                                          │
+│     ↘    ↘     ↘                     │         ↖       ↖        ↖              │
+└────┬─────┬─────┬─────────────────────┘      ┌───────────────────────────────┐   │
+     │     │     │                            │     Attention Mechanism       │   │
+     ↓     ↓     ↓                            │ eₜⱼ = sₜ · hⱼ → αₜⱼ = softmax  │   │
+     ←────── αₜⱼ applied to hⱼ ───────────────┴───────────────────────────────┘   │
+                    ↓                                                              │
+            +------------------+                                                   │
+            | Context vector cₜ| ← weighted sum of encoder outputs                 │
+            +------------------+                                                   │
+                         ↓                                                         │
+              [sₜ ⊕ cₜ] → Dense + softmax → yₜ                                     │
+                                               ↓                                   │
+                                       Output word: “Le”, “chat”, “mange” …        │
+
+
